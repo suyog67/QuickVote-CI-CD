@@ -1,0 +1,73 @@
+pipeline {
+    agent any
+
+    environment {
+        IMAGE_NAME = "votingapp"
+        IMAGE_TAG  = "${BUILD_NUMBER}"
+    }
+
+    stages {
+
+        stage('Clone') {
+            steps {
+                git url: 'https://github.com/suyog67/End-to-End-CI-CD-Pipeline.git', branch: 'main'
+            }
+        }
+
+        stage('Build') {
+            steps {
+                sh 'docker build -t ete-cicd .'
+            }
+        }
+
+        stage('Test') {
+            steps {
+                sh 'docker run --rm -e CI=true ete-cicd npm test'
+            }
+        }
+
+        stage('Push to DockerHub') {
+            steps {
+                withCredentials([usernamePassword(
+                    credentialsId: "dockerhub",
+                    usernameVariable: "dockerhubuser",
+                    passwordVariable: "dockerhubpass"
+                )]) {
+                    sh '''
+                    echo $dockerhubpass | docker login -u $dockerhubuser --password-stdin
+
+                    docker tag ete-cicd $dockerhubuser/$IMAGE_NAME:$IMAGE_TAG
+                    docker tag ete-cicd $dockerhubuser/$IMAGE_NAME:latest
+
+                    docker push $dockerhubuser/$IMAGE_NAME:$IMAGE_TAG
+                    docker push $dockerhubuser/$IMAGE_NAME:latest
+                    '''
+                }
+            }
+        }
+
+        stage('Deploy') {
+            steps {
+                sh '''
+                docker compose down
+                docker compose up -d
+                '''
+            }
+        }
+    }
+
+    post {
+
+        success {
+            mail to: 'suyogg6cc@gmail.com',
+                 subject: "Build #${BUILD_NUMBER} Successful",
+                 body: "Build ${BUILD_NUMBER} deployed successfully."
+        }
+
+        failure {
+            mail to: 'suyogg6cc@gmail.com',
+                 subject: "Build #${BUILD_NUMBER} Failed",
+                 body: "Build ${BUILD_NUMBER} failed. Check logs."
+        }
+    }
+}

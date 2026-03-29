@@ -1,0 +1,677 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>VoteBox — Live Polling</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Barlow+Condensed:wght@300;600;800&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #0d0d0f;
+      --surface: #141418;
+      --border: #2a2a30;
+      --accent: #e8ff3a;
+      --accent2: #ff4d6d;
+      --text: #f0f0f0;
+      --muted: #666672;
+      --radius: 4px;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Barlow Condensed', sans-serif;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* Grid lines background */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(232,255,58,0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(232,255,58,0.03) 1px, transparent 1px);
+      background-size: 40px 40px;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .app { position: relative; z-index: 1; max-width: 860px; margin: 0 auto; padding: 0 20px 80px; }
+
+    /* ── Header ── */
+    header {
+      display: flex;
+      align-items: baseline;
+      gap: 16px;
+      padding: 40px 0 36px;
+      border-bottom: 1px solid var(--border);
+    }
+    .logo {
+      font-size: 42px;
+      font-weight: 800;
+      letter-spacing: -1px;
+      color: var(--text);
+      line-height: 1;
+    }
+    .logo span { color: var(--accent); }
+    .tagline {
+      font-family: 'Space Mono', monospace;
+      font-size: 11px;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 2px;
+    }
+    .header-right { margin-left: auto; }
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-family: 'Space Mono', monospace;
+      font-size: 10px;
+      background: #1a1a20;
+      border: 1px solid var(--border);
+      color: var(--muted);
+      padding: 6px 12px;
+      border-radius: 20px;
+      letter-spacing: 1px;
+    }
+    .dot {
+      width: 6px; height: 6px;
+      background: var(--accent);
+      border-radius: 50%;
+      animation: pulse 2s infinite;
+    }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+    /* ── Tabs ── */
+    .tabs {
+      display: flex;
+      gap: 0;
+      margin: 32px 0 0;
+      border-bottom: 1px solid var(--border);
+    }
+    .tab {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 16px;
+      font-weight: 600;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      color: var(--muted);
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 12px 24px;
+      position: relative;
+      transition: color .2s;
+    }
+    .tab.active {
+      color: var(--accent);
+    }
+    .tab.active::after {
+      content: '';
+      position: absolute;
+      bottom: -1px; left: 0; right: 0;
+      height: 2px;
+      background: var(--accent);
+    }
+    .tab:hover:not(.active) { color: var(--text); }
+
+    /* ── Sections ── */
+    .section { display: none; padding: 32px 0 0; }
+    .section.visible { display: block; }
+
+    /* ── Create Poll Form ── */
+    .form-block { margin-bottom: 24px; }
+    label {
+      display: block;
+      font-size: 11px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--muted);
+      font-family: 'Space Mono', monospace;
+      margin-bottom: 8px;
+    }
+    input[type="text"] {
+      width: 100%;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      color: var(--text);
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 20px;
+      font-weight: 300;
+      padding: 14px 16px;
+      outline: none;
+      transition: border-color .2s;
+    }
+    input[type="text"]:focus { border-color: var(--accent); }
+    input[type="text"]::placeholder { color: var(--muted); }
+
+    .options-list { display: flex; flex-direction: column; gap: 8px; }
+    .option-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .option-row input { flex: 1; font-size: 17px; }
+    .btn-icon {
+      width: 44px; height: 44px;
+      background: none;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      color: var(--muted);
+      font-size: 20px;
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      transition: all .15s;
+      flex-shrink: 0;
+    }
+    .btn-icon:hover { border-color: var(--accent2); color: var(--accent2); }
+    .btn-add {
+      font-family: 'Space Mono', monospace;
+      font-size: 11px;
+      letter-spacing: 1px;
+      color: var(--muted);
+      background: none;
+      border: 1px dashed var(--border);
+      border-radius: var(--radius);
+      padding: 10px;
+      width: 100%;
+      cursor: pointer;
+      transition: all .2s;
+      margin-top: 4px;
+    }
+    .btn-add:hover { border-color: var(--accent); color: var(--accent); }
+
+    .btn-primary {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 18px;
+      font-weight: 800;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      background: var(--accent);
+      color: #0d0d0f;
+      border: none;
+      border-radius: var(--radius);
+      padding: 16px 36px;
+      cursor: pointer;
+      transition: transform .1s, opacity .2s;
+    }
+    .btn-primary:hover { opacity: .9; transform: translateY(-1px); }
+    .btn-primary:active { transform: translateY(0); }
+    .btn-primary:disabled { opacity: .4; cursor: not-allowed; transform: none; }
+
+    /* ── Poll Cards ── */
+    .polls-grid { display: flex; flex-direction: column; gap: 2px; }
+    .poll-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+      transition: border-color .2s;
+    }
+    .poll-card:hover { border-color: #3a3a44; }
+    .poll-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 20px 24px;
+      cursor: pointer;
+    }
+    .poll-title {
+      font-size: 24px;
+      font-weight: 600;
+      letter-spacing: .5px;
+      line-height: 1.2;
+    }
+    .poll-meta {
+      font-family: 'Space Mono', monospace;
+      font-size: 10px;
+      color: var(--muted);
+      margin-top: 4px;
+    }
+    .expand-btn {
+      background: none; border: none;
+      color: var(--muted); font-size: 20px;
+      cursor: pointer; padding: 4px;
+      transition: transform .2s, color .2s;
+      flex-shrink: 0;
+    }
+    .poll-card.open .expand-btn { transform: rotate(180deg); color: var(--accent); }
+
+    .poll-body {
+      display: none;
+      padding: 0 24px 24px;
+      border-top: 1px solid var(--border);
+    }
+    .poll-card.open .poll-body { display: block; }
+
+    /* Voting options */
+    .vote-options { display: flex; flex-direction: column; gap: 10px; margin: 20px 0; }
+    .vote-option {
+      position: relative;
+      background: none;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+      cursor: pointer;
+      padding: 0;
+      text-align: left;
+      transition: border-color .15s;
+    }
+    .vote-option:hover:not(:disabled) { border-color: var(--accent); }
+    .vote-option:disabled { cursor: default; }
+    .option-bar {
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(90deg, rgba(232,255,58,0.12), rgba(232,255,58,0.05));
+      transform-origin: left;
+      transition: transform .5s cubic-bezier(.4,0,.2,1);
+    }
+    .option-content {
+      position: relative;
+      z-index: 1;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 18px;
+    }
+    .option-text {
+      font-size: 18px;
+      font-weight: 600;
+      color: var(--text);
+    }
+    .option-stats {
+      font-family: 'Space Mono', monospace;
+      font-size: 12px;
+      color: var(--muted);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .option-pct {
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--accent);
+      font-family: 'Barlow Condensed', sans-serif;
+      min-width: 42px;
+      text-align: right;
+    }
+    .vote-option.winner { border-color: rgba(232,255,58,0.4); }
+    .vote-option.winner .option-bar {
+      background: linear-gradient(90deg, rgba(232,255,58,0.2), rgba(232,255,58,0.05));
+    }
+    .vote-option.my-vote { border-color: rgba(232,255,58,0.6); }
+
+    .poll-footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-top: 16px;
+    }
+    .total-votes {
+      font-family: 'Space Mono', monospace;
+      font-size: 11px;
+      color: var(--muted);
+    }
+    .btn-delete {
+      font-family: 'Space Mono', monospace;
+      font-size: 10px;
+      letter-spacing: 1px;
+      background: none;
+      border: 1px solid var(--border);
+      color: var(--muted);
+      padding: 6px 12px;
+      border-radius: var(--radius);
+      cursor: pointer;
+      transition: all .15s;
+    }
+    .btn-delete:hover { border-color: var(--accent2); color: var(--accent2); }
+
+    /* ── Empty / Toast ── */
+    .empty {
+      text-align: center;
+      padding: 80px 20px;
+      color: var(--muted);
+    }
+    .empty-icon { font-size: 48px; margin-bottom: 16px; }
+    .empty-title { font-size: 24px; font-weight: 600; color: var(--text); margin-bottom: 8px; }
+    .empty-sub { font-family: 'Space Mono', monospace; font-size: 12px; }
+
+    .toast {
+      position: fixed;
+      bottom: 32px;
+      left: 50%;
+      transform: translateX(-50%) translateY(100px);
+      background: var(--accent);
+      color: #0d0d0f;
+      font-family: 'Space Mono', monospace;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      padding: 12px 24px;
+      border-radius: 2px;
+      z-index: 999;
+      transition: transform .3s cubic-bezier(.34,1.56,.64,1);
+      white-space: nowrap;
+    }
+    .toast.error { background: var(--accent2); color: #fff; }
+    .toast.show { transform: translateX(-50%) translateY(0); }
+
+    .loading {
+      text-align: center;
+      padding: 60px;
+      font-family: 'Space Mono', monospace;
+      font-size: 12px;
+      color: var(--muted);
+      letter-spacing: 2px;
+    }
+  </style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <div>
+      <div class="logo">Vote<span>Box</span></div>
+      <div class="tagline">Live polling platform</div>
+    </div>
+    <div class="header-right">
+      <div class="pill"><span class="dot"></span> <span id="poll-count">0 polls</span></div>
+    </div>
+  </header>
+
+  <nav class="tabs">
+    <button class="tab active" data-tab="polls">All Polls</button>
+    <button class="tab" data-tab="create">+ Create Poll</button>
+  </nav>
+
+  <!-- All Polls -->
+  <section id="tab-polls" class="section visible">
+    <div id="polls-container"><div class="loading">LOADING POLLS...</div></div>
+  </section>
+
+  <!-- Create Poll -->
+  <section id="tab-create" class="section">
+    <div class="form-block">
+      <label for="poll-title">Poll Question</label>
+      <input type="text" id="poll-title" placeholder="What do you want to ask?" maxlength="120" />
+    </div>
+    <div class="form-block">
+      <label>Options</label>
+      <div class="options-list" id="options-list">
+        <div class="option-row">
+          <input type="text" class="option-input" placeholder="Option 1" maxlength="80" />
+          <button class="btn-icon remove-option" title="Remove">✕</button>
+        </div>
+        <div class="option-row">
+          <input type="text" class="option-input" placeholder="Option 2" maxlength="80" />
+          <button class="btn-icon remove-option" title="Remove">✕</button>
+        </div>
+      </div>
+      <button class="btn-add" id="add-option">+ Add another option</button>
+    </div>
+    <div class="form-block">
+      <button class="btn-primary" id="create-btn">Launch Poll</button>
+    </div>
+  </section>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const API = window.location.origin;
+
+// Voter identity (persisted in memory per session)
+const VOTER_TOKEN = 'voter_' + Math.random().toString(36).slice(2);
+const votedPolls = {}; // pollId → optionId
+
+// ── Utils ────────────────────────────────────────────────────────────────────
+function showToast(msg, type = '') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast' + (type ? ' ' + type : '');
+  void t.offsetWidth;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2800);
+}
+
+function timeAgo(iso) {
+  const sec = Math.floor((Date.now() - new Date(iso)) / 1000);
+  if (sec < 60) return 'just now';
+  if (sec < 3600) return Math.floor(sec/60) + 'm ago';
+  if (sec < 86400) return Math.floor(sec/3600) + 'h ago';
+  return Math.floor(sec/86400) + 'd ago';
+}
+
+// ── API ──────────────────────────────────────────────────────────────────────
+async function fetchPolls() {
+  const r = await fetch(`${API}/api/polls`);
+  return (await r.json()).polls;
+}
+
+async function createPoll(title, options) {
+  const r = await fetch(`${API}/api/polls`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ title, options })
+  });
+  const data = await r.json();
+  if (!r.ok) throw new Error(data.error);
+  return data;
+}
+
+async function castVote(pollId, optionId) {
+  const r = await fetch(`${API}/api/polls/${pollId}/vote`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ optionId, voterToken: VOTER_TOKEN + '_' + pollId })
+  });
+  const data = await r.json();
+  if (!r.ok) throw new Error(data.error);
+  return data;
+}
+
+async function deletePoll(pollId) {
+  const r = await fetch(`${API}/api/polls/${pollId}`, { method: 'DELETE' });
+  if (!r.ok) throw new Error('Failed to delete');
+}
+
+// ── Render ───────────────────────────────────────────────────────────────────
+function renderPolls(polls) {
+  const container = document.getElementById('polls-container');
+  document.getElementById('poll-count').textContent = polls.length + ' poll' + (polls.length !== 1 ? 's' : '');
+
+  if (polls.length === 0) {
+    container.innerHTML = `<div class="empty">
+      <div class="empty-icon">🗳️</div>
+      <div class="empty-title">No polls yet</div>
+      <div class="empty-sub">Create one to get started</div>
+    </div>`;
+    return;
+  }
+
+  container.innerHTML = '<div class="polls-grid" id="polls-grid"></div>';
+  const grid = document.getElementById('polls-grid');
+
+  polls.reverse().forEach(poll => {
+    const hasVoted = !!votedPolls[poll.id];
+    const myVoteId = votedPolls[poll.id];
+    const winner = poll.options.reduce((a, b) => b.votes > a.votes ? b : a, poll.options[0]);
+
+    const card = document.createElement('div');
+    card.className = 'poll-card';
+    card.dataset.id = poll.id;
+
+    card.innerHTML = `
+      <div class="poll-header">
+        <div>
+          <div class="poll-title">${escHtml(poll.title)}</div>
+          <div class="poll-meta">${poll.totalVotes} vote${poll.totalVotes !== 1 ? 's' : ''} · ${timeAgo(poll.createdAt)}</div>
+        </div>
+        <button class="expand-btn">▾</button>
+      </div>
+      <div class="poll-body">
+        <div class="vote-options">
+          ${poll.options.map(opt => {
+            const isWinner = hasVoted && opt.id === winner.id && poll.totalVotes > 0;
+            const isMyVote = opt.id === myVoteId;
+            return `
+            <button class="vote-option ${isWinner ? 'winner' : ''} ${isMyVote ? 'my-vote' : ''}"
+                    data-option-id="${opt.id}"
+                    ${hasVoted ? 'disabled' : ''}>
+              <div class="option-bar" style="transform: scaleX(${opt.percentage / 100})"></div>
+              <div class="option-content">
+                <span class="option-text">${escHtml(opt.text)}${isMyVote ? ' ✓' : ''}</span>
+                <span class="option-stats">
+                  <span>${opt.votes} vote${opt.votes !== 1 ? 's' : ''}</span>
+                  <span class="option-pct">${hasVoted ? opt.percentage + '%' : '—'}</span>
+                </span>
+              </div>
+            </button>`;
+          }).join('')}
+        </div>
+        <div class="poll-footer">
+          <span class="total-votes">${hasVoted ? `TOTAL: ${poll.totalVotes} VOTES` : 'SELECT AN OPTION TO VOTE'}</span>
+          <button class="btn-delete" data-poll-id="${poll.id}">DELETE</button>
+        </div>
+      </div>
+    `;
+
+    // Expand / collapse
+    card.querySelector('.poll-header').addEventListener('click', () => {
+      card.classList.toggle('open');
+    });
+
+    // Vote
+    card.querySelectorAll('.vote-option').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        const optionId = btn.dataset.optionId;
+        try {
+          const updated = await castVote(poll.id, optionId);
+          votedPolls[poll.id] = optionId;
+          showToast('VOTE CAST ✓');
+          const allPolls = await fetchPolls();
+          const wasOpen = card.classList.contains('open');
+          renderPolls(allPolls);
+          // Re-open the card we voted on
+          const newCard = document.querySelector(`.poll-card[data-id="${poll.id}"]`);
+          if (newCard && wasOpen) newCard.classList.add('open');
+        } catch (err) {
+          showToast(err.message, 'error');
+        }
+      });
+    });
+
+    // Delete
+    card.querySelector('.btn-delete').addEventListener('click', async (e) => {
+      e.stopPropagation();
+      if (!confirm('Delete this poll?')) return;
+      try {
+        await deletePoll(poll.id);
+        showToast('POLL DELETED');
+        const allPolls = await fetchPolls();
+        renderPolls(allPolls);
+      } catch (err) {
+        showToast(err.message, 'error');
+      }
+    });
+
+    grid.appendChild(card);
+  });
+}
+
+function escHtml(str) {
+  return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ── Create Form ──────────────────────────────────────────────────────────────
+document.getElementById('add-option').addEventListener('click', () => {
+  const list = document.getElementById('options-list');
+  const count = list.querySelectorAll('.option-input').length + 1;
+  if (count > 8) return showToast('Max 8 options', 'error');
+  const row = document.createElement('div');
+  row.className = 'option-row';
+  row.innerHTML = `<input type="text" class="option-input" placeholder="Option ${count}" maxlength="80" />
+    <button class="btn-icon remove-option" title="Remove">✕</button>`;
+  list.appendChild(row);
+  row.querySelector('input').focus();
+  bindRemoveButtons();
+});
+
+function bindRemoveButtons() {
+  document.querySelectorAll('.remove-option').forEach(btn => {
+    btn.onclick = () => {
+      const rows = document.querySelectorAll('.option-row');
+      if (rows.length <= 2) return showToast('Minimum 2 options', 'error');
+      btn.closest('.option-row').remove();
+    };
+  });
+}
+bindRemoveButtons();
+
+document.getElementById('create-btn').addEventListener('click', async () => {
+  const title = document.getElementById('poll-title').value.trim();
+  const options = [...document.querySelectorAll('.option-input')]
+    .map(i => i.value.trim()).filter(Boolean);
+
+  if (!title) return showToast('Enter a question', 'error');
+  if (options.length < 2) return showToast('Add at least 2 options', 'error');
+
+  const btn = document.getElementById('create-btn');
+  btn.disabled = true;
+  btn.textContent = 'Creating...';
+
+  try {
+    await createPoll(title, options);
+    showToast('POLL CREATED ✓');
+    // Reset form
+    document.getElementById('poll-title').value = '';
+    document.getElementById('options-list').innerHTML = `
+      <div class="option-row"><input type="text" class="option-input" placeholder="Option 1" maxlength="80"/><button class="btn-icon remove-option" title="Remove">✕</button></div>
+      <div class="option-row"><input type="text" class="option-input" placeholder="Option 2" maxlength="80"/><button class="btn-icon remove-option" title="Remove">✕</button></div>`;
+    bindRemoveButtons();
+    // Switch to polls tab
+    switchTab('polls');
+    const allPolls = await fetchPolls();
+    renderPolls(allPolls);
+  } catch (err) {
+    showToast(err.message, 'error');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Launch Poll';
+  }
+});
+
+// ── Tabs ─────────────────────────────────────────────────────────────────────
+function switchTab(name) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.tab === name));
+  document.querySelectorAll('.section').forEach(s => s.classList.toggle('visible', s.id === 'tab-' + name));
+}
+document.querySelectorAll('.tab').forEach(t => {
+  t.addEventListener('click', () => switchTab(t.dataset.tab));
+});
+
+// ── Init ─────────────────────────────────────────────────────────────────────
+(async () => {
+  try {
+    const polls = await fetchPolls();
+    renderPolls(polls);
+    // Auto-refresh every 10s
+    setInterval(async () => {
+      const refreshed = await fetchPolls();
+      renderPolls(refreshed);
+    }, 10000);
+  } catch (err) {
+    document.getElementById('polls-container').innerHTML =
+      '<div class="empty"><div class="empty-icon">⚠️</div><div class="empty-title">Cannot reach server</div><div class="empty-sub">Make sure the backend is running</div></div>';
+  }
+})();
+</script>
+</body>
+</html>

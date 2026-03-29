@@ -1,0 +1,7 @@
+services:
+  app:
+    image: suyogkulkarni90/votingapp:latest
+    container_name: voting-app
+    ports:
+      - "3000:3000"
+    restart: always
