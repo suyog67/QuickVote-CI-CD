@@ -6,6 +6,8 @@
 ![Jenkins](https://img.shields.io/badge/Jenkins-CI%2FCD-D24939?logo=jenkins&logoColor=white)
 ![Jest](https://img.shields.io/badge/Tested-Jest-C21325?logo=jest&logoColor=white)
 
+**Live Application:** [https://quickvote-pmjl.onrender.com/](https://quickvote-pmjl.onrender.com/)
+
 A lightweight, real-time polling web application built with **Node.js + Express** and a vanilla JS frontend. The project ships with a complete **Jenkins CI/CD pipeline** — from source code to Docker image to live deployment — with automated testing and email notifications at every stage.
 
 ---
