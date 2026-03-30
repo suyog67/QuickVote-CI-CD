@@ -1,5 +1,9 @@
 # QuickVote: End-to-End CI/CD Pipeline
 
+[![Live Demo](https://img.shields.io/badge/Live_Demo-View_App-blue?style=for-the-badge)](https://quickvote-pmjl.onrender.com/)
+
+**Live Application:** [https://quickvote-pmjl.onrender.com/](https://quickvote-pmjl.onrender.com/)
+
 QuickVote is a real-time, Node.js-based voting application designed to demonstrate a complete DevOps lifecycle. This project focuses on automating the integration, testing, and deployment processes using modern containerization and CI/CD tools.
 
 ## 🚀 Project Overview
@@ -22,17 +26,18 @@ This repository showcases a fully automated pipeline that takes the application 
 * **CI/CD**: Jenkins
 * **Containerization**: Docker, Docker Compose
 * **Registry**: DockerHub
+* **Cloud Hosting**: Render
 
 ---
 
 ## 🏗 CI/CD Pipeline Stages
 
-The Jenkins pipeline defines the following automated stages:
+The Jenkins pipeline (`jenkinsfile`) defines the following automated stages:
 
-1.  **Clone**: Fetches the latest code from the GitHub repository.
-2.  **Build**: Creates a Docker image named `ete-cicd` from the provided Dockerfile.
-3.  **Test**: Runs the unit and integration tests inside a temporary container to validate the build.
-4.  **Push to DockerHub**: Tags the image with the unique build number and `latest` tag, then pushes it to the DockerHub registry.
+1.  **Clone**: Fetches the latest code from the GitHub repository `main` branch.
+2.  **Build**: Creates a Docker image named `ete-cicd` from the provided multi-stage `Dockerfile`.
+3.  **Test**: Runs the unit and integration tests inside a temporary container to validate the build (`npm test`).
+4.  **Push to DockerHub**: Authenticates securely, tags the image with the unique build number and `latest` tag, then pushes it to the DockerHub registry.
 5.  **Deploy**: Uses Docker Compose to pull the latest image and restart the application service.
 
 ---
@@ -42,31 +47,9 @@ The Jenkins pipeline defines the following automated stages:
 ### Prerequisites
 * Docker and Docker Compose installed
 * Jenkins server with Docker and Pipeline plugins
-* DockerHub account and credentials configured in Jenkins as `dockerhub`
+* DockerHub account (credentials configured in Jenkins as `dockerhub`)
 
-### Running Locally with Docker
-To spin up the application immediately:
+### Running Locally with Docker Compose
+To spin up the application immediately using the pre-built image:
 ```bash
 docker compose up -d
-```
-The app will be accessible at `http://localhost:3000`.
-
-### Manual Build
-```bash
-docker build -t voting-app .
-docker run -p 3000:3000 voting-app
-```
-
----
-
-## 🧪 Testing
-The project includes a comprehensive test suite using Jest. You can run tests locally using:
-```bash
-npm test
-```
-This executes tests and generates a coverage report to ensure all API endpoints (Poll creation, Voting, Health checks) are functioning as expected.
-
----
-
-## 📩 Notifications
-The pipeline is configured to send automated email notifications to `suyogg6cc@gmail.com` upon build success or failure, ensuring rapid response to pipeline status.
